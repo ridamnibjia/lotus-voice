@@ -1,0 +1,14 @@
+{
+  "name": "spa-voice-agent",
+  "main": "src/agent.ts",
+  "compatibility_date": "2026-05-29",
+  "assets": { "directory": "./dist/client" },
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [{ "name": "SpaAgent", "class_name": "SpaAgent" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["SpaAgent"] }
+  ]
+}
