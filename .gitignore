@@ -3,7 +3,7 @@ dist/
 .wrangler/
 .env
 .DS_Store
-.dev
+.dev.vars
 /.agents
 /.wrangler
 package-lock.json
