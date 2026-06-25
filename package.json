@@ -18,7 +18,7 @@
     "@livekit/agents": "^1.4.8",
     "@livekit/agents-plugin-deepgram": "^1.4.8",
     "@livekit/agents-plugin-google": "^1.4.8",
-    "@livekit/agents-plugin-openai": "1.4.8",
+    "@livekit/agents-plugin-openai": "^1.4.8",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "livekit-client": "^2.19.2",
