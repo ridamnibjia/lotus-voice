@@ -26,9 +26,27 @@ const LOTUS: TenantConfig = {
   voice: 'aura-2-thalia-en',
   hours: 'Mon-Wed: 10am-7pm, Thu-Fri: 10am-8pm, Sat: 9am-6pm, Sun: 11am-4pm',
   services: [
-    { name: 'Swedish Massage', description: 'A gentle full-body massage using long, flowing strokes.', goodFor: 'general relaxation and easing mild tension', durationMin: 60, price: 120 },
-    { name: 'Deep Tissue Massage', description: 'Firm pressure targeting deeper muscle layers.', goodFor: 'chronic tightness and knots', durationMin: 90, price: 140 },
-    { name: 'Facial', description: 'A cleansing and hydrating skin treatment.', goodFor: 'refreshing and nourishing the skin', durationMin: 60, price: 150 },
+    {
+      name: 'Swedish Massage',
+      description: 'A full-body massage using long, flowing strokes, kneading, and gentle pressure with warm oil. Pressure is light to moderate — never intense. The room is quiet, dimly lit, and warm. Most clients feel deeply relaxed or even fall asleep. Sessions run 60 minutes. Recommend this to first-time spa visitors, anyone who feels stressed, anxious, or burned out, people with trouble sleeping, or callers who just want to feel good without targeting specific pain. It is the gentler, more affordable option compared to Deep Tissue.',
+      goodFor: 'stress relief, anxiety, sleep problems, general relaxation, first-time spa visitors, or anyone who wants a nurturing full-body experience without intense pressure. Not the right fit if the caller has deep muscle knots, sports injuries, or chronic tension in specific areas — steer those callers to Deep Tissue instead.',
+      durationMin: 60,
+      price: 120,
+    },
+    {
+      name: 'Deep Tissue Massage',
+      description: 'A 90-minute massage using firm, slow strokes that reach deeper muscle layers and connective tissue. The therapist focuses on specific problem areas — shoulders, neck, lower back, or wherever the caller holds tension. Pressure is noticeably stronger than Swedish; some clients feel mild discomfort in very tight spots, which is normal and temporary. Always recommend this to callers who mention chronic back or neck pain, sitting at a desk all day, recurring knots, athletic recovery, or anyone who says Swedish "never feels like enough." It costs twenty dollars more than Swedish and runs 30 minutes longer, so acknowledge that trade-off honestly when relevant.',
+      goodFor: 'chronic muscle tension, knots, back pain, neck and shoulder tightness, desk workers, athletes, and anyone who needs real therapeutic pressure rather than general relaxation. Not ideal for first-timers who are unsure of their pressure tolerance — if they seem hesitant, suggest they start with Swedish.',
+      durationMin: 90,
+      price: 140,
+    },
+    {
+      name: 'Facial',
+      description: 'A 60-minute professional skin treatment: double cleanse, gentle steam, light exfoliation, a targeted mask (hydrating, brightening, or calming depending on skin type), and finishing moisturizer with SPF. The esthetician customizes the mask and serums to the client\'s skin on the day. Skin looks visibly refreshed and glowing immediately after. Clients often describe it as relaxing as a massage. Recommend this to callers concerned about dull, dry, or tired-looking skin, anyone with an upcoming event or photo, people who haven\'t had a professional skin treatment in a while, or those looking for a self-care treat that also addresses their skin. It is the highest-priced service at one hundred fifty dollars.',
+      goodFor: 'dull or dehydrated skin, pre-event glow, general skin maintenance, anti-aging concerns, and callers who want both relaxation and a visible skin result in one session. If a caller mentions severe active acne or a skin condition, gently note that a consultation with their dermatologist may be worthwhile alongside spa facials — be honest, not dismissive.',
+      durationMin: 60,
+      price: 150,
+    },
   ],
 };
 
