@@ -84,6 +84,10 @@ export default function App() {
       });
 
       room.on(RoomEvent.Disconnected, () => endCall());
+      // Agent-initiated end: worker calls ctx.room.disconnect() which makes the
+      // agent participant leave. That fires ParticipantDisconnected here, not
+      // Disconnected (which only fires when the local participant disconnects).
+      room.on(RoomEvent.ParticipantDisconnected, () => endCall());
 
       await room.connect(url, token);
       await room.localParticipant.setMicrophoneEnabled(true);
@@ -96,10 +100,12 @@ export default function App() {
   };
 
   const endCall = async () => {
-    await roomRef.current?.disconnect();
+    const room = roomRef.current;
+    if (!room) return;
     roomRef.current = null;
     setIsLive(false);
     setStatus("Ready to Start");
+    await room.disconnect();
   };
 
   return (
