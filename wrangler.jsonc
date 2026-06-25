@@ -1,14 +1,9 @@
 {
-  "name": "spa-voice-agent",
-  "main": "src/agent.ts",
-  "compatibility_date": "2026-05-29",
-  "assets": { "directory": "./dist/client" },
+  // Cloudflare Pages config: static frontend in dist/ + Pages Function in functions/.
+  // Deploy: npm run build && npx wrangler pages deploy
+  "name": "lotus-voice-agent",
+  "compatibility_date": "2026-06-25",
+  // nodejs_compat: livekit-server-sdk uses node crypto/buffer for JWT signing.
   "compatibility_flags": ["nodejs_compat"],
-  "ai": { "binding": "AI" },
-  "durable_objects": {
-    "bindings": [{ "name": "SpaAgent", "class_name": "SpaAgent" }]
-  },
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["SpaAgent"] }
-  ]
+  "pages_build_output_dir": "dist"
 }

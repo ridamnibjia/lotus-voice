@@ -1,116 +1,215 @@
-import { useState } from "react";
-import { useVoiceAgent } from "@cloudflare/voice/react";
+import { useState, useRef } from "react";
+import { Room, RoomEvent, Track } from "livekit-client";
+
+interface Msg {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+}
+
+interface Appt {
+  id: number;
+  name: string;
+  service: string;
+  day: string;
+  time: string;
+  confirmationId: string;
+}
+
+// Single-tenant demo: the agent is grounded in this same config server-side
+// (src/agent/tenant.ts). Shown read-only so the demo viewer sees Lotus's KB.
+const KB = {
+  name: "Lotus Day Spa",
+  address: "1847 Fillmore Street, San Francisco, CA 94115",
+  phone: "(415) 555-0142",
+  services:
+    "Swedish Massage ($120, 60 min), Deep Tissue ($140, 90 min), Facial ($150, 60 min)",
+  hours: "Mon-Wed: 10am-7pm, Thu-Fri: 10am-8pm, Sat: 9am-6pm, Sun: 11am-4pm",
+};
 
 export default function App() {
-  const {
-    status,
-    transcript,
-    interimTranscript,
-    metrics,
-    isMuted,
-    startCall,
-    endCall,
-    toggleMute,
-  } = useVoiceAgent({ agent: "SpaAgent" });
+  const [isLive, setIsLive] = useState(false);
+  const [model, setModel] = useState<"gemini" | "deepseek">("gemini");
+  const [status, setStatus] = useState("Ready to Start");
+  const [transcript, setTranscript] = useState<Msg[]>([]);
+  const [appointments, setAppointments] = useState<Appt[]>([]);
+  const roomRef = useRef<Room | null>(null);
 
-  const [recap, setRecap] = useState<string | null>(null);
-
-  const live = status !== "idle";
-  const statusText =
-    { 
-      idle: "Ready to help", 
-      listening: "I'm listening…", 
-      thinking: "Thinking…", 
-      speaking: "Lotus is speaking" 
-    }[status] ?? status;
-
-  async function loadRecap() {
-    setRecap("Loading…");
+  const startCall = async () => {
     try {
-      const rows = await (await fetch("/admin/log")).json() as any[];
-      setRecap(
-        rows.length
-          ? rows
-              .map(
-                (r: any) =>
-                  `${new Date(r.ts).toLocaleTimeString()}  [${r.kind}]  ${r.payload}`
-              )
-              .join("\n")
-          : "No saved events yet."
+      const { token, url } = await fetch(`/api/token?model=${model}`).then(
+        (r) => r.json(),
       );
+      const room = new Room();
+      roomRef.current = room;
+
+      // Agent audio: subscribe + attach so it plays. LiveKit handles the
+      // jitter buffer and barge-in natively — no manual scheduling.
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach();
+          el.autoplay = true;
+          document.body.appendChild(el);
+        }
+      });
+
+      // Live transcript: STT (user) + agent speech arrive as transcription
+      // segments. Upsert by segment id so interim text updates in place, then
+      // finalizes — gives the live "typing" feel without duplicate lines.
+      room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
+        const role: Msg["role"] = participant?.isLocal ? "user" : "assistant";
+        setTranscript((prev) => {
+          const next = [...prev];
+          for (const seg of segments) {
+            const idx = next.findIndex((m) => m.id === seg.id);
+            const msg: Msg = { id: seg.id, role, text: seg.text };
+            if (idx >= 0) next[idx] = msg;
+            else next.push(msg);
+          }
+          return next;
+        });
+      });
+
+      // Confirmed bookings pushed by the worker on the 'booking' topic.
+      room.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
+        if (topic && topic !== "booking") return;
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(payload));
+          if (msg.type === "booking" && msg.appt) {
+            setAppointments((prev) => [...prev, msg.appt as Appt]);
+          }
+        } catch (e) {
+          console.error("bad data message:", e);
+        }
+      });
+
+      room.on(RoomEvent.Disconnected, () => endCall());
+
+      await room.connect(url, token);
+      await room.localParticipant.setMicrophoneEnabled(true);
+      setIsLive(true);
+      setStatus("Connected");
     } catch (e) {
-      setRecap("Could not load log: " + e);
+      console.error("Failed to start call:", e);
+      alert("Please allow microphone access to start the call.");
     }
-  }
+  };
+
+  const endCall = async () => {
+    await roomRef.current?.disconnect();
+    roomRef.current = null;
+    setIsLive(false);
+    setStatus("Ready to Start");
+  };
 
   return (
-    <div className="wrap">
-      <div className="card">
-        <div className="eyebrow">Lotus Day Spa</div>
-        <h1>
-          Voice <em>Receptionist</em>
-        </h1>
-
-        <div className="orb-container">
-          <div className={`orb ${status} ${live ? "live" : ""}`} />
+    <div className="app-container">
+      {/* Left Sidebar: Knowledge Base (read-only — grounds the agent's answers) */}
+      <aside className="kb-sidebar">
+        <h2>Knowledge Base</h2>
+        <div className="form-group">
+          <label>Spa Name</label>
+          <input value={KB.name} readOnly />
         </div>
-        
-        <div className="status">{statusText}</div>
-
-        <div className="controls">
-          <button className={live ? "end" : ""} onClick={live ? endCall : startCall}>
-            {live ? "End Call" : "Start Call"}
-          </button>
-          {live && (
-            <button className="secondary" onClick={toggleMute}>
-              {isMuted ? "Unmute" : "Mute"}
-            </button>
-          )}
+        <div className="form-group">
+          <label>Address</label>
+          <input value={KB.address} readOnly />
         </div>
+        <div className="form-group">
+          <label>Phone</label>
+          <input value={KB.phone} readOnly />
+        </div>
+        <div className="form-group">
+          <label>Services &amp; Pricing</label>
+          <textarea rows={5} value={KB.services} readOnly />
+        </div>
+        <div className="form-group">
+          <label>Availability / Hours</label>
+          <textarea rows={3} value={KB.hours} readOnly />
+        </div>
+      </aside>
 
-        {interimTranscript && (
-          <div className="interim-text">
-            "{interimTranscript}"
+      {/* Main Content: Agent Interaction */}
+      <main className="main-content">
+        <header className="agent-header">
+          <h1>Lotus — Voice Demo</h1>
+          <div className="status-indicator">
+            <div className={`dot ${isLive ? "live" : ""}`} />
+            {status}
           </div>
-        )}
+        </header>
 
-        <div className="transcript-area">
-          {transcript.map((m, i) => (
-            <div className={`msg ${m.role}`} key={i}>
-              <span className="role-label">{m.role === "user" ? "You" : "Lotus"}</span>
-              {m.text}
-            </div>
+        <div className="model-toggle">
+          <span className="model-toggle-label">Model</span>
+          {(["gemini", "deepseek"] as const).map((m) => (
+            <button
+              key={m}
+              className={`model-option ${model === m ? "active" : ""}`}
+              onClick={() => setModel(m)}
+              disabled={isLive}
+            >
+              {m === "gemini" ? "Gemini 3.1" : "DeepSeek V4"}
+            </button>
           ))}
-          {transcript.length === 0 && !live && (
-            <div style={{ textAlign: 'center', opacity: 0.4, fontSize: '0.85rem', marginTop: '2rem' }}>
-              Your conversation will appear here
+        </div>
+
+        <div className="call-controls">
+          <button
+            className={`start-btn ${isLive ? "end" : ""}`}
+            onClick={isLive ? endCall : startCall}
+          >
+            {isLive ? (
+              <>
+                <span>🛑</span> End Call
+              </>
+            ) : (
+              <>
+                <span>📞</span> Start Browser Call
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="transcript-container">
+          {transcript.length === 0 ? (
+            <div
+              style={{ textAlign: "center", color: "#9ca3af", marginTop: "4rem" }}
+            >
+              Your conversation transcript will appear here in real-time.
             </div>
+          ) : (
+            transcript.map((m) => (
+              <div className={`message ${m.role}`} key={m.id}>
+                <span className="msg-label">
+                  {m.role === "user" ? "You" : "Lotus"}
+                </span>
+                {m.text}
+              </div>
+            ))
           )}
         </div>
+      </main>
 
-        {metrics && (
-          <div className="metrics-footer">
-            <span>LLM: {metrics.llm_ms}ms</span>
-            <span>TTS: {metrics.first_audio_ms}ms</span>
-          </div>
-        )}
-
-        <div className="twilio-info">
-          <h4><span>📞</span> Telephony Active</h4>
-          <p style={{ opacity: 0.7 }}>
-            Twilio calls to your US number are routed to this agent automatically.
+      {/* Right Sidebar: live bookings rail (fed by the worker's data messages) */}
+      <aside className="activity-sidebar">
+        <h2>Recent Bookings</h2>
+        {appointments.length === 0 ? (
+          <p style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
+            No appointments booked yet.
           </p>
-        </div>
-
-        {!live && transcript.length > 0 && (
-          <div className="recap-area">
-            <button className="secondary" onClick={loadRecap}>
-              View Call Log
-            </button>
-            {recap && <pre>{recap}</pre>}
-          </div>
+        ) : (
+          [...appointments].reverse().map((appt) => (
+            <div key={appt.confirmationId} className="appointment-card">
+              <strong>{appt.name}</strong>
+              <div className="service">{appt.service}</div>
+              <div className="time">
+                {appt.day} @ {appt.time}
+              </div>
+              <div className="conf-id">{appt.confirmationId}</div>
+            </div>
+          ))
         )}
-      </div>
+      </aside>
     </div>
   );
 }
