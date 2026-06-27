@@ -4,7 +4,7 @@ import {
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
-import { getTenantConfig } from './tenant.js';
+import { getTenantConfig, tenantFromKB } from './tenant.js';
 import { buildSystemPrompt } from './prompt.js';
 import { makeTools } from './tools.js';
 import { makeSTT, makeLLM, makeTTS, type ModelChoice } from './providers.js';
@@ -23,7 +23,18 @@ export default defineAgent({
     // Room name from token server: lotus-demo__<model>__<unique>. Model is segment 1.
     const model: ModelChoice = ctx.room.name?.split('__')[1] === 'deepseek' ? 'deepseek' : 'gemini';
     console.log(`[agent] using LLM: ${model}`);
-    const tenant = await getTenantConfig('lotus');
+
+    // The browser ships its edited KB as participant metadata on the token. Wait
+    // for the caller, read it, and ground the agent in it. Falls back to the
+    // hardcoded Lotus config if metadata is missing/garbage so a bad edit can
+    // never take the agent down.
+    let tenant = await getTenantConfig('lotus');
+    try {
+      const caller = await ctx.waitForParticipant();
+      if (caller.metadata) tenant = tenantFromKB(JSON.parse(caller.metadata));
+    } catch (e) {
+      console.error('[agent] could not read KB from participant metadata, using defaults:', e);
+    }
     const hours = parseHours(tenant.hours);
     const appointments: Appointment[] = [];
     const call = callStore.start(tenant.id);

@@ -15,6 +15,16 @@ export interface TenantConfig {
   voice: string;         // TTS voice id
   hours: string;         // parsed by scheduling.parseHours
   services: Service[];
+  servicesText?: string; // free-text override for the prompt (from the editable KB)
+}
+
+// Fields the browser KB panel can edit. All optional — blanks fall back to LOTUS.
+export interface KBInput {
+  name?: string;
+  address?: string;
+  phone?: string;
+  hours?: string;
+  services?: string;
 }
 
 const LOTUS: TenantConfig = {
@@ -53,6 +63,26 @@ const LOTUS: TenantConfig = {
 // Single-tenant for the demo. Seam for a per-tenant DB later.
 export async function getTenantConfig(_id: string): Promise<TenantConfig> {
   return LOTUS;
+}
+
+// Merge the browser's edited KB over the Lotus defaults. Blank/whitespace fields
+// keep the default. `services` (if edited) becomes the spoken grounding via
+// servicesText; the structured LOTUS.services stay put so scheduling can still
+// look up durations by name (scheduling.ts falls back to a default duration for
+// names it doesn't recognize).
+// ponytail: edits only ground the prompt; they don't change scheduling durations.
+// Add structured service editing if/when someone needs per-service durations live.
+export function tenantFromKB(kb: KBInput): TenantConfig {
+  const pick = (v: string | undefined, fallback: string) =>
+    v && v.trim() ? v.trim() : fallback;
+  return {
+    ...LOTUS,
+    name: pick(kb.name, LOTUS.name),
+    address: pick(kb.address, LOTUS.address),
+    phone: pick(kb.phone, LOTUS.phone),
+    hours: pick(kb.hours, LOTUS.hours),
+    servicesText: kb.services && kb.services.trim() ? kb.services.trim() : undefined,
+  };
 }
 
 export function servicesAsText(t: TenantConfig): string {

@@ -17,8 +17,15 @@ app.get('/api/token', async (req, res) => {
   const model = req.query.model === 'deepseek' ? 'deepseek' : 'gemini';
   // Unique room per session so concurrent testers don't land in the same call.
   const room = `lotus-demo__${model}__${crypto.randomUUID()}`;
+  // Edited KB rides as participant metadata; worker reads it via waitForParticipant().
+  let metadata: string | undefined;
+  const kb = typeof req.query.kb === 'string' ? req.query.kb : undefined;
+  if (kb && kb.length < 4000) {
+    try { JSON.parse(kb); metadata = kb; } catch { /* ignore bad KB, use defaults */ }
+  }
   const at = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
     identity: `web-${Date.now()}`,
+    metadata,
   });
   at.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true });
   res.json({ token: await at.toJwt(), url: process.env.LIVEKIT_URL, room });

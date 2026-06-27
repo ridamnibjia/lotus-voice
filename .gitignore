@@ -8,7 +8,7 @@ dist/
 /.wrangler
 package-lock.json
 skills-lock.json
-/.remember
-.claude
-.remember
-.superpowers
+.claude/
+.remember/
+.superpowers/
+docs/

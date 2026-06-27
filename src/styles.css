@@ -95,6 +95,23 @@ button.primary-btn {
 button.primary-btn:hover { background: var(--primary-hover); }
 button.primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+input:disabled, textarea:disabled { background: var(--primary-soft, #f3f4f6); color: #6b7280; cursor: not-allowed; }
+
+.kb-save-btn {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.kb-save-btn:hover { background: var(--primary-hover); }
+.kb-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.kb-hint { margin-top: 0.5rem; font-size: 0.78rem; color: #9ca3af; text-align: center; }
+
 /* Middle Pane: Conversation */
 .main-content {
   display: flex;

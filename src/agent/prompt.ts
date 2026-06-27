@@ -41,6 +41,6 @@ BUSINESS: ${t.name}
 ADDRESS: ${t.address}
 PHONE: ${t.phone}
 HOURS: ${t.hours}
-SERVICES: ${servicesAsText(t)}
+SERVICES: ${t.servicesText ?? servicesAsText(t)}
 `.trim();
 }
