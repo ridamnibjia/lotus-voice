@@ -38,7 +38,9 @@ export function makeLLM(model: ModelChoice = DEFAULT_MODEL) {
   // it unset and falls back to the GOOGLE_API_KEY (AI Studio) path. The plugin
   // also reads these envs itself; passing them here just pins a region default
   // and keeps the model-vendor choice readable in one file.
-  // ponytail: location must be a REGION (us-west1), not a zone (us-west1-a).
+  // ponytail: Vertex serves Gemini 3.x flash-lite from the `global` endpoint,
+  // not a regional one — a real region like us-west1 404s NOT_FOUND. Use
+  // `global` unless GOOGLE_CLOUD_LOCATION pins a region that actually serves it.
   const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
   return new google.LLM({
     model: 'gemini-3.1-flash-lite',
@@ -47,7 +49,7 @@ export function makeLLM(model: ModelChoice = DEFAULT_MODEL) {
     ...(useVertex && {
       vertexai: true,
       project: process.env.GOOGLE_CLOUD_PROJECT,
-      location: process.env.GOOGLE_CLOUD_LOCATION ?? 'us-west1',
+      location: process.env.GOOGLE_CLOUD_LOCATION ?? 'global',
     }),
   });
 }
