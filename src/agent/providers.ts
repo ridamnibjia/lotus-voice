@@ -32,10 +32,23 @@ export function makeLLM(model: ModelChoice = DEFAULT_MODEL) {
   // 3.x model errors out before any audio. MINIMAL = least thinking = lowest
   // voice latency, while still avoiding the empty-text/thoughtSignature chunks
   // that can trip the LiveKit streaming parser.
+  //
+  // Vertex vs AI Studio: prod (GCP worker) sets GOOGLE_GENAI_USE_VERTEXAI=true
+  // so Gemini bills to GCP Cloud Billing (the trial credits). Local dev leaves
+  // it unset and falls back to the GOOGLE_API_KEY (AI Studio) path. The plugin
+  // also reads these envs itself; passing them here just pins a region default
+  // and keeps the model-vendor choice readable in one file.
+  // ponytail: location must be a REGION (us-west1), not a zone (us-west1-a).
+  const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
   return new google.LLM({
     model: 'gemini-3.1-flash-lite',
     temperature: 0.4,
     thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+    ...(useVertex && {
+      vertexai: true,
+      project: process.env.GOOGLE_CLOUD_PROJECT,
+      location: process.env.GOOGLE_CLOUD_LOCATION ?? 'us-west1',
+    }),
   });
 }
 
